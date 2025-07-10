@@ -1,128 +1,42 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 model Movie {
-  id            String   @id @default(cuid())
-  title         String
-  originalTitle String?
-  year          Int
-  rating        Float?
-  duration      Int?
-  genre         String[]
-  director      String?
-  actors        String?
-  plot          String?  @db.Text
-  posterUrl     String?
-  imdbId        String?  @unique
-  tmdbId        Int?     @unique
+  id          Int           @id @default(autoincrement())
+  title       String
+  description String?
+  genre       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   
-  slug          String   @unique
-  keywords      String?
+  // 添加磁力链接关系
+  magnetLinks MagnetLink[]
   
-  viewCount     Int      @default(0)
-  downloadCount Int      @default(0)
-  
-  status        Status   @default(PENDING)
-  
-  downloadLinks DownloadLink[]
-  submissions   Submission[]
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  @@index([status])
-  @@index([year])
-  @@index([rating])
-  @@index([viewCount])
-  @@fulltext([title, originalTitle, plot])
+  @@map("movies")
 }
 
-model DownloadLink {
-  id          String      @id @default(cuid())
-  movieId     String
-  platform    Platform
-  linkType    LinkType
-  url         String      @db.Text
-  password    String?
-  quality     Quality
-  size        String?
-  format      String?
+model MagnetLink {
+  id       Int    @id @default(autoincrement())
+  movieId  Int
+  name     String        // 链接名称，如："流浪地球 - 1080P高清"
+  magnet   String        // 磁力链接
+  size     String?       // 文件大小，如："2.5GB"
+  quality  String?       // 清晰度，如："1080P", "720P", "4K"
+  seeders  Int?          // 做种人数（可选）
+  leechers Int?          // 下载人数（可选）
+  createdAt DateTime     @default(now())
   
-  isActive    Boolean     @default(true)
-  lastChecked DateTime?
-  checkCount  Int         @default(0)
-  failCount   Int         @default(0)
+  // 与电影的关系
+  movie    Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
   
-  sourceUrl   String?
-  sourceName  String?
-  
-  movie       Movie       @relation(fields: [movieId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime    @default(now())
-  
-  @@index([movieId, platform])
-  @@index([isActive])
-  @@index([quality])
-}
-
-model Submission {
-  id           String           @id @default(cuid())
-  movieId      String?
-  movieTitle   String
-  downloadUrls Json
-  description  String?          @db.Text
-  contactInfo  String?
-  status       SubmissionStatus @default(PENDING)
-  adminNotes   String?          @db.Text
-  
-  movie        Movie?           @relation(fields: [movieId], references: [id])
-  
-  createdAt    DateTime         @default(now())
-  processedAt  DateTime?
-  
-  @@index([status])
-  @@index([createdAt])
-}
-
-enum Status {
-  PENDING
-  APPROVED
-  REJECTED
-  DELETED
-}
-
-enum Platform {
-  QUARK
-  BAIDU
-  ALIYUN
-  THUNDER
-  OTHER
-}
-
-enum LinkType {
-  DIRECT
-  CLOUD_DRIVE
-  MAGNET
-}
-
-enum Quality {
-  CAM
-  TS
-  TC
-  DVD
-  HD
-  BD
-  UHD_4K
-}
-
-enum SubmissionStatus {
-  PENDING
-  APPROVED
-  REJECTED
+  @@map("magnet_links")
 }
